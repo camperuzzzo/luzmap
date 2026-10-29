@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LuzMap · Projection Mapping</title>
+  <meta name="description" content="Editor de projection mapping en el navegador: mapea superficies y proyecta tus imágenes y vídeos.">
+  <meta name="theme-color" content="#0b0b0f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="editor">
+  <header class="topbar">
+    <div class="brand"><img src="icons/icon.svg" alt=""><span>LuzMap</span></div>
+    <input id="projectName" class="project-name" type="text" spellcheck="false" title="Nombre del proyecto">
+    <div class="tb-group">
+      <button class="btn icon" data-act="new" title="Nuevo proyecto"><i data-icon="file"></i></button>
+      <button class="btn icon" data-act="open" title="Abrir proyecto (Ctrl+O)"><i data-icon="folder"></i></button>
+      <button class="btn icon" data-act="save" title="Guardar proyecto con sus medios (Ctrl+S)"><i data-icon="save"></i></button>
+      <span class="tb-sep"></span>
+      <button class="btn icon" data-act="undo" title="Deshacer (Ctrl+Z)"><i data-icon="undo"></i></button>
+      <button class="btn icon" data-act="redo" title="Rehacer (Ctrl+Shift+Z)"><i data-icon="redo"></i></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="tb-group">
+      <button class="btn" data-toggle="settings.guidesOnOutput" title="Mostrar contornos y puntos en el proyector mientras mapeas (G)"><i data-icon="guides"></i><span class="tb-label">Guías</span></button>
+      <button class="btn" data-toggle="settings.testPattern" title="Patrón de prueba en todas las superficies (T)"><i data-icon="pattern"></i><span class="tb-label">Patrón</span></button>
+      <button class="btn blackout" data-toggle="settings.blackout" title="Apagar la proyección (B)"><i data-icon="power"></i><span class="tb-label">Negro</span></button>
+      <label class="master" title="Brillo general"><i data-icon="sun"></i><input type="range" min="0" max="1" step="0.01" data-k="settings:master"></label>
+    </div>
+    <span class="tb-sep"></span>
+    <button class="btn primary live" data-act="output" title="Abrir la ventana de salida para el proyector (P)"><i data-icon="projector"></i>Proyectar</button>
+    <button class="btn icon" data-act="fullscreen" title="Usar esta pantalla como salida a pantalla completa (F)"><i data-icon="expand"></i></button>
+    <button class="btn icon" data-act="help" title="Ayuda y atajos (?)"><i data-icon="help"></i></button>
+  </header>
+
+  <aside class="left panel">
+    <section class="sec">
+      <div class="sec-h"><span class="grow">Superficies</span></div>
+      <div class="sec-b">
+        <div class="addrow">
+          <button class="btn" data-act="addQuad" title="Añadir un cuadrilátero con 4 esquinas (A)"><i data-icon="quad"></i>Plano</button>
+          <button class="btn" data-act="addMesh" title="Añadir una superficie con malla para objetos curvos"><i data-icon="mesh"></i>Malla</button>
+          <button class="btn" data-act="toolDraw" title="Dibujar el contorno de un objeto (D)"><i data-icon="pen"></i>Forma</button>
+        </div>
+        <div id="surfaceList" class="slist"></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><span class="grow">Biblioteca</span>
+        <button class="btn sm" data-act="import" title="Importar imágenes o vídeos"><i data-icon="plus"></i>Importar</button>
+      </div>
+      <div class="sec-b">
+        <div id="mediaGrid" class="mgrid"></div>
+        <div id="dropzone" class="dropzone">Arrastra aquí imágenes o vídeos<br>(o directamente sobre una superficie)</div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><span class="grow">Escenas</span>
+        <button class="btn sm" data-act="addScene" title="Nueva escena (copia la actual)"><i data-icon="plus"></i>Escena</button>
+      </div>
+      <div class="sec-b">
+        <div id="sceneList" class="slist"></div>
+        <div class="playrow">
+          <label class="cb" title="Pasa de escena automáticamente según la duración de cada una"><input type="checkbox" data-k="playlist:autoplay">Reproducir en bucle</label>
+        </div>
+        <label class="field"><span>Fundido</span><input type="range" min="0" max="5" step="0.1" data-k="playlist:transition" data-default="1"><output data-out="playlist:transition" data-fmt="s"></output></label>
+        <div class="note">Cada escena guarda qué se proyecta en cada superficie. Cambia con las teclas <kbd>1</kbd>…<kbd>9</kbd>. Duración 0 = manual.</div>
+      </div>
+    </section>
+  </aside>
+
+  <main class="center">
+    <div class="stage-toolbar">
+      <div class="seg">
+        <button class="btn" data-tool="edit" title="Mover esquinas, puntos de malla y superficies (V)"><i data-icon="pointer"></i>Editar</button>
+        <button class="btn" data-tool="mask" title="Recortar la superficie con una máscara (M)"><i data-icon="mask"></i>Máscara</button>
+        <button class="btn" data-tool="draw" title="Dibujar una forma nueva siguiendo un objeto (D)"><i data-icon="pen"></i>Dibujar</button>
+      </div>
+      <span class="tb-sep"></span>
+      <button class="btn sm" data-toggle="settings.showGrid" title="Mostrar rejilla"><i data-icon="grid"></i>Rejilla</button>
+      <button class="btn sm" data-toggle="settings.snapGrid" title="Ajustar a la rejilla"><i data-icon="magnet"></i>A rejilla</button>
+      <button class="btn sm" data-toggle="settings.snapPoints" title="Imán entre esquinas de superficies (mantén Alt para desactivarlo)"><i data-icon="magnet"></i>A puntos</button>
+      <span id="toolHint" class="tool-hint"></span>
+    </div>
+    <div id="stageHost" class="stage-host">
+      <div id="stageEmpty" class="stage-empty"><div><b>Empieza a mapear</b>Pulsa <b style="display:inline;font-size:inherit">Proyectar</b> para abrir la salida en el proyector, añade un <b style="display:inline;font-size:inherit">Plano</b> y arrastra sus esquinas hasta que encajen con tu objeto real. Después suelta encima una imagen o un vídeo.</div></div>
+      <div id="stageBadge" class="stage-badge" style="opacity:0"></div>
+    </div>
+  </main>
+
+  <aside id="inspector" class="right panel"></aside>
+
+  <footer class="statusbar">
+    <span id="stOutput"></span>
+    <span id="stProjector"><span class="dot"></span>Proyector</span>
+    <span id="stFps"></span>
+    <span id="stHint" class="hint"></span>
+  </footer>
+
+  <input id="fileMedia" type="file" accept="image/*,video/*,.mp4,.webm,.mov,.m4v" multiple hidden>
+  <input id="fileProject" type="file" accept=".luzmap,.json,application/json" hidden>
+  <input id="fileRelink" type="file" accept="image/*,video/*,.mp4,.webm,.mov,.m4v" hidden>
+  <div id="toast" class="toast"></div>
+
+  <dialog id="helpDialog">
+    <div class="dlg-h">Cómo hacer projection mapping con LuzMap <button class="btn icon ghost" data-act="closeHelp"><i data-icon="x"></i></button></div>
+    <div class="dlg-b">
+      <h3>1 · Conecta el proyector</h3>
+      <ol>
+        <li>Conecta el proyector al ordenador (HDMI) y configúralo como <b>pantalla extendida</b> (no duplicada).</li>
+        <li>Pulsa <b>Proyectar</b>: se abre una ventana negra. Muévela al proyector y haz <b>doble clic</b> en ella (o pulsa <kbd>F</kbd>) para ponerla a pantalla completa.</li>
+        <li>Si solo tienes una pantalla, usa el botón de <b>pantalla completa</b> del editor (<kbd>F</kbd>) — <kbd>Esc</kbd> para salir.</li>
+      </ol>
+      <h3>En el móvil (Android, p. ej. Samsung Galaxy)</h3>
+      <ol>
+        <li>Abre la app en Chrome. Con el menú <b>⋮ → Añadir a pantalla de inicio</b> la tendrás como una app más, y funciona sin internet.</li>
+        <li>Conecta el móvil al proyector con un adaptador <b>USB-C a HDMI</b>, o sin cables con <b>Smart View</b> si el proyector lo admite. Si se abre Samsung DeX, cámbialo a <b>Duplicar pantalla</b>.</li>
+        <li>Prepara las superficies e importa tus fotos o vídeos de la galería (toca un medio para ponerlo en la superficie seleccionada).</li>
+        <li>Pulsa <b>Proyectar</b>: el escenario pasa a pantalla completa en horizontal, y eso es lo que sale por el proyector. Mueve las esquinas con el dedo; puedes tocar cerca del punto, no hace falta taparlo.</li>
+        <li>Para afinar usa <b>Ajuste fino</b> en el panel de la superficie. Sal con el gesto <b>Atrás</b>, desactiva <b>Guías</b> y vuelve a <b>Proyectar</b> para el show.</li>
+      </ol>
+      <h3>2 · Mapea tu objeto</h3>
+      <ol>
+        <li>Añade un <b>Plano</b> por cada cara plana del objeto (una pared, una puerta, el lateral de la furgo…). Verás en el proyector un patrón de prueba con números.</li>
+        <li>Arrastra las <b>4 esquinas</b> hasta que coincidan con las esquinas reales. Afina con las <b>flechas</b> (1 px) o <kbd>Shift</kbd>+flechas (10 px). <kbd>Tab</kbd> pasa a la siguiente esquina.</li>
+        <li>¿Superficie curva o irregular? Usa <b>Malla</b> (o actívala en el panel derecho) y mueve los puntos intermedios.</li>
+        <li>¿Forma rara (ventana, rueda, logo)? Usa <b>Dibujar</b> y haz clic alrededor del objeto, o añade una <b>Máscara</b> a una superficie para recortarla. La máscara elíptica es perfecta para cosas redondas.</li>
+      </ol>
+      <h3>3 · Añade tu contenido</h3>
+      <ol>
+        <li><b>Importa</b> imágenes o vídeos (o arrástralos). Se guardan en el navegador y siguen ahí al volver.</li>
+        <li>Arrastra un medio sobre una superficie, o selecciona la superficie y haz clic en el medio.</li>
+        <li>También puedes proyectar colores, efectos animados (plasma, neón, barrido…), texto o la cámara web.</li>
+        <li>Crea <b>Escenas</b> para cambiar todo el contenido de golpe con fundido, a mano o en bucle automático.</li>
+        <li>Al terminar desactiva las <b>Guías</b> (<kbd>G</kbd>) para que no se vean en la proyección. <b>Guardar</b> descarga un archivo <code>.luzmap</code> con el mapeo y todos los medios.</li>
+      </ol>
+      <h3>Atajos de teclado</h3>
+      <div class="keys">
+        <span><kbd>V</kbd> <kbd>M</kbd> <kbd>D</kbd></span><span>Herramientas: Editar · Máscara · Dibujar</span>
+        <span><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></span><span>Mover el punto (o la superficie) 1 px · con <kbd>Shift</kbd> 10 px · con <kbd>Alt</kbd> ¼ px</span>
+        <span><kbd>Tab</kbd></span><span>Siguiente esquina / punto de máscara</span>
+        <span><kbd>Alt</kbd> + arrastrar</span><span>Sin imán</span>
+        <span><kbd>Intro</kbd> / doble clic</span><span>Cerrar la forma que estás dibujando · <kbd>Retroceso</kbd> quita el último punto</span>
+        <span>Clic derecho</span><span>Borrar un punto de la máscara</span>
+        <span><kbd>A</kbd></span><span>Añadir plano</span>
+        <span><kbd>Ctrl</kbd>+<kbd>D</kbd></span><span>Duplicar superficie</span>
+        <span><kbd>Supr</kbd></span><span>Eliminar superficie</span>
+        <span><kbd>1</kbd>…<kbd>9</kbd></span><span>Cambiar de escena</span>
+        <span><kbd>Espacio</kbd></span><span>Reproducir / pausar vídeos</span>
+        <span><kbd>G</kbd> · <kbd>T</kbd> · <kbd>B</kbd></span><span>Guías en el proyector · Patrón de prueba · Negro</span>
+        <span><kbd>P</kbd> · <kbd>F</kbd></span><span>Abrir proyector · Pantalla completa</span>
+        <span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span>Deshacer · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> rehacer</span>
+        <span><kbd>Ctrl</kbd>+<kbd>S</kbd> · <kbd>Ctrl</kbd>+<kbd>O</kbd></span><span>Guardar · Abrir proyecto</span>
+      </div>
+      <h3>Consejos</h3>
+      <ul>
+        <li>Usa Chrome o Edge para el mejor rendimiento. Vídeos en MP4 (H.264) o WebM.</li>
+        <li>Oscurece la sala y pon el proyector lo más perpendicular posible al objeto: menos distorsión y más brillo.</li>
+        <li>Si el proyector y el editor tienen distinta resolución no pasa nada: el mapeo se guarda en proporción a la salida.</li>
+      </ul>
+    </div>
+  </dialog>
+
+  <script src="js/util.js"></script>
+  <script src="js/geom.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/link.js"></script>
+  <script src="js/media.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/overlay.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/project-file.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
